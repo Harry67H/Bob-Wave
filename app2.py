@@ -3,6 +3,7 @@ from pydub import AudioSegment
 import io
 import base64
 import json
+import os  # for Render PORT
 
 app = Flask(__name__)
 
@@ -113,6 +114,7 @@ html = """
 
   <script src="https://unpkg.com/wavesurfer.js"></script>
   <script>
+    // === Full JS from your original script remains unchanged ===
     let audioChunks = [];
     let mediaRecorder;
     let layerId = 0;
@@ -194,7 +196,6 @@ html = """
         div.className = "layer";
         div.dataset.id = l.id;
 
-        // controls row
         const controls = document.createElement("div");
         controls.className = "layer-controls";
 
@@ -225,7 +226,7 @@ html = """
         volume.oninput = () => {
           l.volume = volume.value;
           l.wavesurfer.setVolume(l.volume);
-          l.wavesurfer.zoom(l.volume * 20 + 10); // louder-looking waveform
+          l.wavesurfer.zoom(l.volume * 20 + 10);
         };
 
         controls.appendChild(eye);
@@ -293,11 +294,7 @@ html = """
       }
     };
 
-    // Downloads area
-    function allowDrop(ev) {
-      ev.preventDefault();
-    }
-
+    function allowDrop(ev) { ev.preventDefault(); }
     document.getElementById("downloads").ondrop = ev => {
       ev.preventDefault();
       if (ev.dataTransfer.files.length > 0) {
@@ -315,14 +312,10 @@ html = """
     function dropToLayers(ev) {
       ev.preventDefault();
       const url = ev.dataTransfer.getData("url");
-      if (url) {
-        addLayerFromUrl(url);
-      }
+      if (url) addLayerFromUrl(url);
     }
 
-    function dropDownload(ev) {
-      ev.preventDefault();
-    }
+    function dropDownload(ev) { ev.preventDefault(); }
 
     document.addEventListener("dragstart", ev => {
       if (ev.target.classList.contains("download-item")) {
@@ -373,10 +366,8 @@ def save():
     mix = None
     for setting in settings:
         layer = next((l for l in layers if l["id"] == setting["id"]), None)
-        if not layer:
-            continue
-        if not setting["visible"]:
-            continue
+        if not layer: continue
+        if not setting["visible"]: continue
 
         gain = 20 * (float(setting["volume"]) - 1)
         adjusted = layer["audio"].apply_gain(gain)
@@ -395,4 +386,5 @@ def save():
     return send_file(buf, mimetype="audio/wav", as_attachment=True, download_name=f"{project}.wave")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
